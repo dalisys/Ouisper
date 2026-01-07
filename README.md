@@ -2,6 +2,10 @@
 
 AI-powered, system-wide dictation for macOS. Trigger recording with a global hotkey and paste transcription into the active app.
 
+![Ouisper general settings](docs/images/Ouisper.png)
+
+![Ouisper provider settings](docs/images/providers.png)
+
 ## Features
 - Menubar app with recording status overlay
 - Global hotkey trigger (Fn/Globe)
