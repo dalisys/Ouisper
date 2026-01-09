@@ -17,7 +17,7 @@ class MenuBarManager: NSObject, NSMenuItemValidation {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem.button {
-            button.image = NSImage(named: "MenuBarIcon")
+            button.image = NSImage(named: "MenuBarIcon") ?? NSImage(systemSymbolName: "waveform", accessibilityDescription: nil)
             button.action = #selector(menuBarClicked)
             button.target = self
         }
@@ -85,7 +85,7 @@ class MenuBarManager: NSObject, NSMenuItemValidation {
         }
         
         if symbolName == "MenuBarIcon" {
-            button.image = NSImage(named: "MenuBarIcon")
+            button.image = NSImage(named: "MenuBarIcon") ?? NSImage(systemSymbolName: "waveform", accessibilityDescription: nil)
         } else {
             button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)
         }

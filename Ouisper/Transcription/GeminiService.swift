@@ -14,8 +14,8 @@ class GeminiService: TranscriptionService {
         let base64Audio = audioData.base64EncodedString()
         
         var promptText = "Transcribe the audio."
-        if !language.isEmpty && language != "auto" {
-            promptText += " The language is \(language)."
+        if let hint = LanguagePreference.promptHint(language) {
+            promptText += " \(hint)"
         }
         
         let json: [String: Any] = [

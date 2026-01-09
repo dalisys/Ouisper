@@ -33,10 +33,11 @@ class MistralVoxtralService: TranscriptionService {
         body.append("\(model)\r\n".data(using: .utf8)!)
         
         // Language (optional)
-        if !language.isEmpty && language != "auto" {
+        let apiLanguage = LanguagePreference.apiLanguage(language)
+        if !apiLanguage.isEmpty {
             body.append("--\(boundary)\r\n".data(using: .utf8)!)
             body.append("Content-Disposition: form-data; name=\"language\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(language)\r\n".data(using: .utf8)!)
+            body.append("\(apiLanguage)\r\n".data(using: .utf8)!)
         }
         
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)

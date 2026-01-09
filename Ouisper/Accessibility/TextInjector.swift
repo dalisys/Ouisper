@@ -33,6 +33,12 @@ class TextInjector {
         return VSCodeTerminalInjector.pasteViaCommandPalette(app: app)
     }
 
+    static func injectBrowser(_ text: String, app: NSRunningApplication?) -> Bool {
+        guard let app else { return false }
+        copyToClipboard(text)
+        return BrowserPasteInjector.paste(app: app)
+    }
+
     static func copyOnly(_ text: String) {
         copyToClipboard(text)
         DictationState.shared.lastInjectionError = "Text copied to clipboard. Press Cmd+V to paste."

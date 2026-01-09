@@ -146,6 +146,10 @@ class DictationEngine: ObservableObject {
                        let app = self.targetApp,
                        TextInjector.injectVsCodeTerminal(finalText, app: app) {
                         // already injected via VS Code terminal command
+                    } else if BrowserPasteInjector.isBrowser(self.targetApp),
+                              let app = self.targetApp,
+                              TextInjector.injectBrowser(finalText, app: app) {
+                        // pasted via browser menu
                     } else if self.isTerminalApp(self.targetApp) {
                         TextInjector.injectTerminal(finalText)
                     } else {
@@ -172,6 +176,10 @@ class DictationEngine: ObservableObject {
                        let app = self.targetApp,
                        TextInjector.injectVsCodeTerminal(errorText, app: app) {
                         // already injected via VS Code terminal command
+                    } else if BrowserPasteInjector.isBrowser(self.targetApp),
+                              let app = self.targetApp,
+                              TextInjector.injectBrowser(errorText, app: app) {
+                        // pasted via browser menu
                     } else if self.isTerminalApp(self.targetApp) {
                         TextInjector.injectTerminal(errorText)
                     } else {

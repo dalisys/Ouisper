@@ -111,6 +111,7 @@ struct GeneralSettingsView: View {
     @State private var isAccessibilityTrusted: Bool = AXIsProcessTrusted()
     @State private var microphoneStatus: AVAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
     @State private var permissionMessage: String?
+    @State private var selectedLanguages: Set<String> = []
     
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -152,17 +153,41 @@ struct GeneralSettingsView: View {
                 .foregroundStyle(OuisperTheme.mist)
 
             VStack(alignment: .leading, spacing: 10) {
-                TextField("Language (e.g., en, fr, de)", text: $settings.language)
-                Text("Leave empty or 'auto' for auto-detection.")
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(languageOptions, id: \.self) { code in
+                        Toggle(code.uppercased(), isOn: Binding(
+                            get: { selectedLanguages.contains(code) },
+                            set: { isOn in
+                                if isOn {
+                                    selectedLanguages.insert(code)
+                                } else {
+                                    selectedLanguages.remove(code)
+                                }
+                            }
+                        ))
+                        .toggleStyle(.checkbox)
+                        .pointerOnHover()
+                    }
+                }
+                Text("Select multiple languages. Leave empty for auto-detection.")
                     .font(.system(size: 11, weight: .regular, design: .monospaced))
                     .foregroundStyle(OuisperTheme.mist.opacity(0.7))
             }
             .glassCard()
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .onAppear { refreshPermissions() }
+        .onAppear {
+            refreshPermissions()
+            if selectedLanguages.isEmpty {
+                selectedLanguages = Set(LanguagePreference.parse(settings.language))
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshPermissions()
+        }
+        .onChange(of: selectedLanguages) { _ in
+            let joined = selectedLanguages.sorted().joined(separator: ", ")
+            settings.language = joined.isEmpty ? "auto" : joined
         }
     }
 
@@ -218,6 +243,11 @@ struct GeneralSettingsView: View {
             }
         }
     }
+
+    private let languageOptions: [String] = [
+        "en", "de", "fr", "es", "it", "pt", "nl", "sv", "no", "da", "fi",
+        "pl", "cs", "tr", "ru", "uk", "ar", "he", "hi", "ja", "ko", "zh"
+    ]
 
     private func permissionCard(title: String, icon: String, status: String, statusColor: Color, actionTitle: String, action: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 10) {
