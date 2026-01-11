@@ -15,3 +15,14 @@ enum AudioQuality: String, CaseIterable, Identifiable {
     
     var id: String { rawValue }
 }
+
+enum HotkeyOption: String, CaseIterable, Identifiable {
+    case fn = "Function (Fn)"
+    case rightCommand = "Right Command"
+    case rightOption = "Right Option"
+    case control = "Control"
+    case insert = "Insert / Help"
+    case custom = "Custom Shortcut"
+    
+    var id: String { rawValue }
+}

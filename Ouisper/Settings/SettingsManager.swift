@@ -8,6 +8,9 @@ class SettingsManager: ObservableObject {
     @AppStorage("selectedProvider") var provider: TranscriptionProvider = .whisper
     @AppStorage("selectedLanguage") var language: String = "en" // Default to English, maybe "auto" later
     @AppStorage("audioQuality") var audioQuality: AudioQuality = .medium
+    @AppStorage("selectedHotkey") var hotkey: HotkeyOption = .fn
+    @AppStorage("customHotkeyKeyCode") var customHotkeyKeyCode: Int = -1
+    @AppStorage("customHotkeyModifiers") var customHotkeyModifiers: Int = 0
     @AppStorage("soundFeedback") var soundFeedback: Bool = true
     @AppStorage("useTextCorrection") var useTextCorrection: Bool = false
     

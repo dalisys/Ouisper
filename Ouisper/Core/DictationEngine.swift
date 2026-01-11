@@ -71,6 +71,8 @@ class DictationEngine: ObservableObject {
     
     private func processAudio(url: URL) async {
         let provider = settings.provider
+        print("DEBUG: Processing Audio with Provider: \(provider.rawValue)")
+        
         guard let apiKey = settings.getApiKey(for: provider), !apiKey.isEmpty else {
             DispatchQueue.main.async {
                 DictationState.shared.status = .error("API Key missing for \(provider.rawValue)")

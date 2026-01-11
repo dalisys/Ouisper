@@ -2,60 +2,77 @@ import Foundation
 
 class GeminiService: TranscriptionService {
     func transcribe(audioURL: URL, apiKey: String, language: String, model: String) async throws -> String {
-        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(apiKey)") else {
-            throw TranscriptionError.invalidURL
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let audioData = try Data(contentsOf: audioURL)
-        let base64Audio = audioData.base64EncodedString()
-        
-        var promptText = "Transcribe the audio."
-        if let hint = LanguagePreference.promptHint(language) {
-            promptText += " \(hint)"
-        }
-        
-        let json: [String: Any] = [
-            "contents": [
-                [
-                    "parts": [
-                        ["text": promptText],
-                        [
-                            "inline_data": [
-                                "mime_type": "audio/mpeg", // Assuming m4a/aac is acceptable as audio/mpeg or audio/mp4? Gemini supports specific mimes.
-                                // Common: audio/wav, audio/mp3, audio/aiff, audio/aac, audio/ogg, audio/flac.
-                                // m4a is usually AAC. "audio/aac" or "audio/mp4" should work.
-                                "data": base64Audio
+        return try await withCheckedThrowingContinuation { continuation in
+            let audioData = try? Data(contentsOf: audioURL)
+            let base64Audio = audioData?.base64EncodedString() ?? ""
+            
+            var promptText = "Transcribe the audio."
+            if let hint = LanguagePreference.promptHint(language) {
+                promptText += " \(hint)"
+            }
+            
+            let jsonDict: [String: Any] = [
+                "contents": [
+                    [
+                        "parts": [
+                            ["text": promptText],
+                            [
+                                "inline_data": [
+                                    "mime_type": "audio/wav",
+                                    "data": base64Audio
+                                ]
                             ]
                         ]
                     ]
                 ]
             ]
-        ]
-        
-        request.httpBody = try JSONSerialization.data(withJSONObject: json)
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw TranscriptionError.invalidResponse
+            
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: jsonDict),
+                  let jsonString = String(data: jsonData, encoding: .utf8) else {
+                continuation.resume(throwing: TranscriptionError.apiError("Failed to encode JSON"))
+                return
+            }
+            
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
+            
+            process.arguments = [
+                "--http1.1",
+                "--ipv4",
+                "-H", "Expect:",
+                "-s",
+                "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(apiKey)",
+                "-H", "Content-Type: application/json",
+                "-d", jsonString
+            ]
+            
+            let outputPipe = Pipe()
+            let errorPipe = Pipe()
+            process.standardOutput = outputPipe
+            process.standardError = errorPipe
+            
+            do {
+                try process.run()
+                process.waitUntilExit()
+                
+                let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                
+                if process.terminationStatus == 0 {
+                    let decoded = try JSONDecoder().decode(GeminiResponse.self, from: outputData)
+                    if let text = decoded.candidates?.first?.content.parts.first?.text {
+                        continuation.resume(returning: text)
+                    } else {
+                        continuation.resume(returning: "")
+                    }
+                } else {
+                    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                    let errorMsg = String(data: errorData, encoding: .utf8) ?? "Curl failed"
+                    continuation.resume(throwing: TranscriptionError.apiError(errorMsg))
+                }
+            } catch {
+                continuation.resume(throwing: TranscriptionError.apiError("Failed to launch curl: \(error.localizedDescription)"))
+            }
         }
-        
-        if !(200...299).contains(httpResponse.statusCode) {
-            let errorMsg = String(data: data, encoding: .utf8) ?? "Unknown API Error"
-            throw TranscriptionError.apiError(errorMsg)
-        }
-        
-        let decoded = try JSONDecoder().decode(GeminiResponse.self, from: data)
-        
-        if let text = decoded.candidates?.first?.content.parts.first?.text {
-            return text
-        }
-        
-        return ""
     }
 }
 

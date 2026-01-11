@@ -125,6 +125,43 @@ struct GeneralSettingsView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
+                    Text("Activation Key")
+                        .foregroundStyle(OuisperTheme.mist.opacity(0.8))
+                    Spacer()
+                    Picker("", selection: $settings.hotkey) {
+                        ForEach(HotkeyOption.allCases) { option in
+                            Text(option.rawValue).tag(option)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .pointerOnHover()
+                    .frame(width: 160)
+                }
+                
+                if settings.hotkey == .custom {
+                    HStack {
+                        Text("Custom Shortcut")
+                            .foregroundStyle(OuisperTheme.mist.opacity(0.8))
+                        Spacer()
+                        ShortcutRecorderView()
+                            .frame(width: 160)
+                    }
+                }
+                
+                // Debugging for Hotkeys
+                if settings.hotkey == .insert {
+                    HStack {
+                        Text("Debug: Press your key. Last Code:")
+                            .font(.system(size: 10, weight: .regular, design: .monospaced))
+                            .foregroundStyle(OuisperTheme.mist.opacity(0.5))
+                        Text("\(HotkeyManager.shared.lastDetectedKeyCode)")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundStyle(OuisperTheme.neon)
+                    }
+                }
+
+                HStack {
                     Text("Audio Quality")
                         .foregroundStyle(OuisperTheme.mist.opacity(0.8))
                     Spacer()
@@ -136,6 +173,7 @@ struct GeneralSettingsView: View {
                     .labelsHidden()
                     .pickerStyle(.segmented)
                     .pointerOnHover()
+                    .frame(width: 160)
                 }
 
                 Toggle("Play Sound Effects", isOn: $settings.soundFeedback)
@@ -153,22 +191,40 @@ struct GeneralSettingsView: View {
                 .foregroundStyle(OuisperTheme.mist)
 
             VStack(alignment: .leading, spacing: 10) {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                    ForEach(languageOptions, id: \.self) { code in
-                        Toggle(code.uppercased(), isOn: Binding(
-                            get: { selectedLanguages.contains(code) },
-                            set: { isOn in
-                                if isOn {
-                                    selectedLanguages.insert(code)
-                                } else {
-                                    selectedLanguages.remove(code)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(languageOptions, id: \.code) { lang in
+                            Toggle(isOn: Binding(
+                                get: { selectedLanguages.contains(lang.code) },
+                                set: { isOn in
+                                    if isOn {
+                                        selectedLanguages.insert(lang.code)
+                                    } else {
+                                        selectedLanguages.remove(lang.code)
+                                    }
                                 }
+                            )) {
+                                HStack {
+                                    Text(lang.name)
+                                        .font(.system(size: 13, weight: .medium, design: .default))
+                                        .foregroundStyle(OuisperTheme.mist)
+                                    Spacer()
+                                    Text(lang.code.uppercased())
+                                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                        .foregroundStyle(OuisperTheme.mist.opacity(0.5))
+                                }
+                                .padding(.vertical, 2)
                             }
-                        ))
-                        .toggleStyle(.checkbox)
-                        .pointerOnHover()
+                            .toggleStyle(.checkbox)
+                            .pointerOnHover()
+                        }
                     }
+                    .padding(8)
                 }
+                .frame(height: 200) // Fixed height scrollable area
+                .background(Color.black.opacity(0.2))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
                 Text("Select multiple languages. Leave empty for auto-detection.")
                     .font(.system(size: 11, weight: .regular, design: .monospaced))
                     .foregroundStyle(OuisperTheme.mist.opacity(0.7))
@@ -185,12 +241,12 @@ struct GeneralSettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshPermissions()
         }
-        .onChange(of: selectedLanguages) { _ in
-            let joined = selectedLanguages.sorted().joined(separator: ", ")
+        .onChange(of: selectedLanguages) { _, newValue in
+            let joined = newValue.sorted().joined(separator: ", ")
             settings.language = joined.isEmpty ? "auto" : joined
         }
     }
-
+    
     private var injectionStatus: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Status")
@@ -244,10 +300,35 @@ struct GeneralSettingsView: View {
         }
     }
 
-    private let languageOptions: [String] = [
-        "en", "de", "fr", "es", "it", "pt", "nl", "sv", "no", "da", "fi",
-        "pl", "cs", "tr", "ru", "uk", "ar", "he", "hi", "ja", "ko", "zh"
-    ]
+    struct LanguageOption: Hashable {
+        let code: String
+        let name: String
+    }
+
+    private let languageOptions: [LanguageOption] = [
+        .init(code: "en", name: "English"),
+        .init(code: "de", name: "German"),
+        .init(code: "fr", name: "French"),
+        .init(code: "es", name: "Spanish"),
+        .init(code: "it", name: "Italian"),
+        .init(code: "pt", name: "Portuguese"),
+        .init(code: "nl", name: "Dutch"),
+        .init(code: "sv", name: "Swedish"),
+        .init(code: "no", name: "Norwegian"),
+        .init(code: "da", name: "Danish"),
+        .init(code: "fi", name: "Finnish"),
+        .init(code: "pl", name: "Polish"),
+        .init(code: "cs", name: "Czech"),
+        .init(code: "tr", name: "Turkish"),
+        .init(code: "ru", name: "Russian"),
+        .init(code: "uk", name: "Ukrainian"),
+        .init(code: "ar", name: "Arabic"),
+        .init(code: "he", name: "Hebrew"),
+        .init(code: "hi", name: "Hindi"),
+        .init(code: "ja", name: "Japanese"),
+        .init(code: "ko", name: "Korean"),
+        .init(code: "zh", name: "Chinese")
+    ].sorted { $0.name < $1.name }
 
     private func permissionCard(title: String, icon: String, status: String, statusColor: Color, actionTitle: String, action: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -408,5 +489,107 @@ struct APISettingsView: View {
             .glassCard()
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+}
+
+struct ShortcutRecorderView: View {
+    @StateObject private var settings = SettingsManager.shared
+    @State private var isRecording = false
+    @State private var monitor: Any?
+    
+    var body: some View {
+        Button(action: toggleRecording) {
+            HStack {
+                if isRecording {
+                    Image(systemName: "circle.fill")
+                        .foregroundStyle(.red)
+                        .font(.system(size: 8))
+                        .opacity(Double(Int(Date().timeIntervalSince1970 * 2) % 2 == 0 ? 1 : 0)) // blink
+                    Text("Press Keys...")
+                        .foregroundStyle(OuisperTheme.mist)
+                } else {
+                    if settings.customHotkeyKeyCode != -1 {
+                        Text(keyString)
+                            .foregroundStyle(OuisperTheme.neon)
+                    } else {
+                        Text("Click to Record")
+                            .foregroundStyle(OuisperTheme.mist.opacity(0.7))
+                    }
+                }
+            }
+            .font(.system(size: 12, weight: .medium, design: .monospaced))
+            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.black.opacity(0.3))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isRecording ? OuisperTheme.neon : Color.white.opacity(0.1), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+    
+    private var keyString: String {
+        var parts: [String] = []
+        let flags = NSEvent.ModifierFlags(rawValue: UInt(bitPattern: settings.customHotkeyModifiers))
+        if flags.contains(.command) { parts.append("Cmd") }
+        if flags.contains(.option) { parts.append("Opt") }
+        if flags.contains(.control) { parts.append("Ctrl") }
+        if flags.contains(.shift) { parts.append("Shift") }
+        
+        // Convert keycode to string (basic mapping)
+        let key = keyCodeToString(UInt16(settings.customHotkeyKeyCode))
+        parts.append(key)
+        
+        return parts.joined(separator: " + ")
+    }
+    
+    private func toggleRecording() {
+        if isRecording {
+            stopRecording()
+        } else {
+            startRecording()
+        }
+    }
+    
+    private func startRecording() {
+        isRecording = true
+        // Monitor for local events
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
+            saveShortcut(event)
+            return nil // Consume event
+        }
+    }
+    
+    private func stopRecording() {
+        isRecording = false
+        if let monitor = monitor {
+            NSEvent.removeMonitor(monitor)
+            self.monitor = nil
+        }
+    }
+    
+    private func saveShortcut(_ event: NSEvent) {
+        settings.customHotkeyKeyCode = Int(event.keyCode)
+        settings.customHotkeyModifiers = Int(event.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue)
+        stopRecording()
+    }
+    
+    private func keyCodeToString(_ keyCode: UInt16) -> String {
+        // Simple mapping for common keys
+        switch keyCode {
+        case 114: return "Insert"
+        case 36: return "Enter"
+        case 49: return "Space"
+        case 48: return "Tab"
+        case 51: return "Delete"
+        case 53: return "Esc"
+        // TODO: Use a proper CGKeyCode mapping for full coverage
+        default: return String(format: "Key %d", keyCode)
+        }
     }
 }
